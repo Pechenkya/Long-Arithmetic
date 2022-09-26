@@ -55,14 +55,14 @@ public:
     explicit operator bool() const;
 
     // User output
-    // friend std::ostream& operator<<(std::ostream& out, const LongInt& num);
+    friend std::ostream& operator<<(std::ostream& out, const LongInt& num);
     std::string to_hex() const;
     std::string to_binary() const;
 
     // Utility functions
-    // void resize(uint16_t new_arr_size); 
+    void resize(uint16_t new_arr_size); 
     // void shrink_to_fit();
-    // uint64_t* get_memory();
+    uint64_t* get_memory();
 private:
     static char hex_char[];
 };

@@ -292,6 +292,15 @@ bool LongInt::operator>=(const LongInt& r) const
 }
 
 // User output
+std::ostream& operator<<(std::ostream& out, const LongInt& num)
+{
+    // Check output mod for hexidecimal
+    if(out.flags() & std::ios_base::hex)
+        return out << num.to_hex();
+    else
+        return out << num.to_binary();
+}
+
 std::string LongInt::to_hex() const
 {
     // Create string
@@ -340,4 +349,47 @@ std::string LongInt::to_binary() const
     result[str_id] = 'b'; // setting prefix
 
     return result;
+}
+
+// Utility functions
+void LongInt::resize(uint16_t new_arr_size)
+{
+    // Check if resize is needed
+    if(new_arr_size == arr_size)
+        return;
+
+    if(!data)
+    {
+        *this = LongInt(0, new_arr_size);
+        return;
+    }
+
+    uint64_t* new_data = new uint64_t[new_arr_size];
+    if(new_arr_size < arr_size)
+    {
+        uint16_t diff = arr_size - new_arr_size;
+        for(uint16_t n = 0, old = diff; n < new_arr_size; ++n, ++old)
+            new_data[n] = data[old];
+    }
+    else
+    {
+        uint16_t diff = new_arr_size - arr_size;
+
+        for(uint16_t i = 0; i < diff; ++i)
+            new_data[i] = 0;
+
+        for(uint16_t n = diff, old = 0; n < new_arr_size; ++n, ++old)
+            new_data[n] = data[old];
+    }
+
+    delete[] data;
+    data = new_data;
+    arr_size = new_arr_size;
+}
+
+
+
+uint64_t* LongInt::get_memory() 
+{
+    return data;
 }
