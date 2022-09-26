@@ -1,8 +1,9 @@
 #include <cstdint>  // fixed size integer types
 
-// Replace with predeclaration
+// Replace with predeclaration or other stuff
 #include <ostream>
 #include <string>
+#define BASIC_ARRAY_SIZE 2
 //
 
 /**
@@ -17,7 +18,7 @@ class LongInt
 public:
     // Constructors and destructor
     LongInt();
-    LongInt(uint64_t _default_num);
+    LongInt(uint64_t _default_num, uint16_t _mem_blocks = BASIC_ARRAY_SIZE);
     LongInt(const LongInt & cp);
     LongInt(LongInt && mv);
     ~LongInt();
@@ -25,10 +26,10 @@ public:
     // Basic binary operations
     // LongInt operator<<(int n) const;
     // LongInt operator>>(int n) const;
-    // LongInt operator^(const LongInt& r) const;
-    // LongInt operator&(const LongInt& r) const;
-    // LongInt operator|(const LongInt& r) const;
-    // LongInt operator~() const;
+    LongInt operator^(const LongInt& r) const;
+    LongInt operator&(const LongInt& r) const;
+    LongInt operator|(const LongInt& r) const;
+    LongInt operator~() const;
 
 
     // Basic arithmetic operations
@@ -54,12 +55,13 @@ public:
     // operator bool() const;
 
     // User output
-    // friend bool operator<<(std::ostream& out, const LongInt& num);
+    // friend std::ostream& operator<<(std::ostream& out, const LongInt& num);
     std::string to_hex() const;
     std::string to_binary() const;
 
     // Utility functions
     // void resize(uint16_t new_arr_size); 
+    // void shrink_to_fit();
     // uint64_t* get_memory();
 private:
     static char hex_char[];

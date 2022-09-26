@@ -1,7 +1,8 @@
 #include "LongInt.hpp"
 #include <exception>
 
-#define BASIC_ARRAY_SIZE 2
+// #include <iostream>
+
 #define MEMORY_BLOCK_SIZE 64
 #define MEMORY_BLOCK_SHIFT 63
 
@@ -19,7 +20,7 @@ LongInt::LongInt() : arr_size{BASIC_ARRAY_SIZE}
     }
 }
 
-LongInt::LongInt(uint64_t _default_num) : arr_size{BASIC_ARRAY_SIZE}
+LongInt::LongInt(uint64_t _default_num, uint16_t _mem_blocks) : arr_size{_mem_blocks}
 {
     // Allocate memory and set all bits to 0, except last value
     data = new uint64_t[arr_size + 1];
@@ -125,6 +126,99 @@ LongInt LongInt::operator+(const LongInt& r) const
 }
 
 
+// Binary operations
+
+
+LongInt LongInt::operator^(const LongInt& r) const
+{
+    // Get longer number and take those size
+    const LongInt* longer;
+    const LongInt* shorter;
+    if(this->arr_size < r.arr_size)
+    {
+        longer = &r;
+        shorter = this;
+    }
+    else
+    {
+        longer = this;
+        shorter = &r;
+    }
+
+    LongInt result(*longer);
+    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
+        counter < shorter->arr_size; ++counter, ++i)
+    {
+        result.data[i] ^= shorter->data[counter];
+    }
+    
+    return result;
+}
+
+LongInt LongInt::operator&(const LongInt& r) const
+{
+    // Get longer number and take those size
+    const LongInt* longer;
+    const LongInt* shorter;
+    if(this->arr_size < r.arr_size)
+    {
+        longer = &r;
+        shorter = this;
+    }
+    else
+    {
+        longer = this;
+        shorter = &r;
+    }
+
+    LongInt result(*longer);
+    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
+        counter < shorter->arr_size; ++counter, ++i)
+    {
+        result.data[i] &= shorter->data[counter];
+    }
+    
+    return result;
+}
+
+LongInt LongInt::operator|(const LongInt& r) const
+{
+    // Get longer number and take those size
+    const LongInt* longer;
+    const LongInt* shorter;
+    if(this->arr_size < r.arr_size)
+    {
+        longer = &r;
+        shorter = this;
+    }
+    else
+    {
+        longer = this;
+        shorter = &r;
+    }
+
+    LongInt result(*longer);
+    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
+        counter < shorter->arr_size; ++counter, ++i)
+    {
+        result.data[i] |= shorter->data[counter];
+    }
+    
+    return result;
+}
+
+LongInt LongInt::operator~() const
+{
+    LongInt result = *this;
+
+    for(uint16_t i = 0; i < arr_size; ++i)
+        result.data[i] = ~data[i];
+
+    return result;
+}
+
+
+
 
 // User output
 std::string LongInt::to_hex() const
@@ -153,8 +247,6 @@ std::string LongInt::to_hex() const
 
     return result;
 }
-
-
 
 std::string LongInt::to_binary() const
 {
