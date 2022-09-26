@@ -46,13 +46,13 @@ public:
     LongInt& operator=(unsigned long long _default_num);
 
     // Compare operators
-    // bool operator==(const LongInt& r) const;
-    // bool operator!=(const LongInt& r) const;
-    // bool operator<(const LongInt& r) const;
-    // bool operator>(const LongInt& r) const;
-    // bool operator<=(const LongInt& r) const;
-    // bool operator>=(const LongInt& r) const;
-    // operator bool() const;
+    bool operator==(const LongInt& r) const;
+    bool operator!=(const LongInt& r) const;
+    bool operator<(const LongInt& r) const;
+    bool operator>(const LongInt& r) const;
+    bool operator<=(const LongInt& r) const;
+    bool operator>=(const LongInt& r) const;
+    explicit operator bool() const;
 
     // User output
     // friend std::ostream& operator<<(std::ostream& out, const LongInt& num);

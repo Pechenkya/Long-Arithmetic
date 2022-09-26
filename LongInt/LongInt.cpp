@@ -218,7 +218,78 @@ LongInt LongInt::operator~() const
 }
 
 
+// Compare operators
+bool LongInt::operator==(const LongInt& r) const
+{
+    if(this->arr_size != r.arr_size)
+        return false;
 
+    for(uint16_t i = 0; i < arr_size; ++i)
+        if(this->data[i] != r.data[i])
+            return false;
+
+    return true;
+}
+
+bool LongInt::operator!=(const LongInt& r) const
+{
+    return !(*this == r);
+}
+
+LongInt::operator bool() const
+{
+    for(uint16_t i = 0; i < arr_size; ++i)
+        if(this->data[i] != 0)
+            return true;
+    
+    return false;
+}
+
+bool LongInt::operator<(const LongInt& r) const
+{
+    // Get longer number and take those size
+    bool r_is_longer = false;
+    const LongInt* longer;
+    const LongInt* shorter;
+    if(this->arr_size < r.arr_size)
+    {
+        longer = &r;
+        shorter = this;
+    }
+    else
+    {
+        r_is_longer = true;
+        longer = this;
+        shorter = &r;
+    }
+
+    uint16_t diff = longer->arr_size - shorter->arr_size;
+
+    // Check longer for zeroes in begin
+    for(uint16_t i = 0; i < diff; ++i)
+        if(longer->data[i] != 0)
+            return r_is_longer;
+    
+    // Compare tails
+    for(uint16_t l = diff, s = 0; s < r.arr_size; ++l, ++s)
+        if(longer->data[l] > shorter->data[s])
+            return r_is_longer;
+}
+
+bool LongInt::operator>(const LongInt& r) const
+{
+    return r < *this;
+}
+
+bool LongInt::operator<=(const LongInt& r) const
+{
+    return !(r > *this);
+}
+
+bool LongInt::operator>=(const LongInt& r) const
+{
+    return !(*this > r);
+}
 
 // User output
 std::string LongInt::to_hex() const
