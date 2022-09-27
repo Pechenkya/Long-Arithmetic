@@ -3,7 +3,6 @@
 // Replace with predeclaration or other stuff
 #include <ostream>
 #include <string>
-#define BASIC_ARRAY_SIZE 2
 //
 
 /**
@@ -24,8 +23,8 @@ public:
     ~LongInt();
 
     // Basic binary operations
-    // LongInt operator<<(int n) const;
-    // LongInt operator>>(int n) const;
+    LongInt operator<<(long long n) const;
+    LongInt operator>>(long long n) const;
     LongInt operator^(const LongInt& r) const;
     LongInt operator&(const LongInt& r) const;
     LongInt operator|(const LongInt& r) const;
@@ -68,5 +67,8 @@ private:
     uint16_t empty_upper_blocks() const;
     static bool set_longer_and_shorter(const LongInt* & a, const LongInt* & b);
     static uint16_t pref_zeroes(uint64_t val);
-    static char hex_char[];
+
+    // Global constants for class
+    static const char hex_char[];
+    static const uint16_t BASIC_ARRAY_SIZE;
 };

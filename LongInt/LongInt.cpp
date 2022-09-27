@@ -1,15 +1,19 @@
 #include "LongInt.hpp"
-#include <exception>
 
-// #include <iostream>
-
+// Memory alignment constants
 #define MEMORY_BLOCK_SIZE 64
-#define MEMORY_BLOCK_SHIFT 63
+#define MSB_SHIFT 63
+
 // 4-bit mask for hex translation
-#define MASK 15
+#define HEX_MASK 15
+
+// Shift logic
+#define REST 63
+#define GLOBAL_SHIFT_DIVISION 6
 
 // static array used to convert integer value to hex_char
-char LongInt::hex_char[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+const char LongInt::hex_char[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+const uint16_t LongInt::BASIC_ARRAY_SIZE = 2;
 
 // Default constructors
 LongInt::LongInt() : arr_size{BASIC_ARRAY_SIZE}
@@ -120,7 +124,7 @@ LongInt LongInt::operator+(const LongInt& r) const
         result.data[l] += shorter->data[s] + carry;
 
         // Carry-check boolean function
-        carry = (((longer->data[l] & shorter->data[s]) | ((~result.data[l]) & (longer->data[l] | shorter->data[s]))) >> MEMORY_BLOCK_SHIFT);
+        carry = (((longer->data[l] & shorter->data[s]) | ((~result.data[l]) & (longer->data[l] | shorter->data[s]))) >> MSB_SHIFT);
     }
 
     while(carry && l >= 0)
@@ -144,7 +148,59 @@ LongInt LongInt::operator+(const LongInt& r) const
 
 
 // Binary operations
+LongInt LongInt::operator<<(long long n) const
+{
+    // Check for safe input
+    if(n <= 0)
+        return *this;
 
+    // Calculate global shift
+    uint16_t glob_shift = (n >> GLOBAL_SHIFT_DIVISION);
+
+    // Calculate local shift (not longer than memory block)
+    uint16_t loc_shift = n & REST;
+    uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
+
+    LongInt result(0, this->arr_size);
+
+    // Global + local shift (from left to right)
+    if(glob_shift < arr_size)
+    {
+        result.data[this->arr_size - glob_shift - 1] = (this->data[this->arr_size - 1] << loc_shift);
+        for(int old = this->arr_size - 2, n = old - glob_shift; n >= 0; --n, --old)
+        {   
+            result.data[n] = (this->data[old] << loc_shift) | (this->data[old + 1] >> loc_shift_inv);
+        }
+    }
+    return result;  
+}
+
+LongInt LongInt::operator>>(long long n) const
+{
+    // Check for safe input
+    if(n <= 0)
+        return *this;
+
+    // Calculate global shift
+    uint16_t glob_shift = (n >> GLOBAL_SHIFT_DIVISION);
+
+    // Calculate local shift (not longer than memory block)
+    uint16_t loc_shift = n & REST;
+    uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
+
+    LongInt result(0, this->arr_size);
+
+    // Global + local shift (from right to left)
+    if(glob_shift < arr_size)
+    {
+        result.data[glob_shift] = (this->data[0] >> loc_shift);
+        for(uint16_t old = 1, n = glob_shift + 1; n < result.arr_size; ++n, ++old)
+        {   
+            result.data[n] = (this->data[old - 1] << loc_shift_inv) | (this->data[old] >> loc_shift);
+        }
+    }
+    return result; 
+}
 
 LongInt LongInt::operator^(const LongInt& r) const
 {
@@ -294,12 +350,16 @@ std::string LongInt::to_hex() const
         for(int block_id = 0; block_id < MEMORY_BLOCK_SIZE && str_id > 1; block_id += 4)
         {
             // Check every 4 bits
-            result[str_id--] = hex_char[(data[arr_id] >> block_id) & MASK];
+            result[str_id--] = hex_char[(data[arr_id] >> block_id) & HEX_MASK];
         }
     }
 
     // Setting up prefix
     result[str_id] = 'x';
+
+    // Zero check
+    if(len == 2)
+        result.push_back('0');
 
     return result;
 }
@@ -323,6 +383,10 @@ std::string LongInt::to_binary() const
     }
 
     result[str_id] = 'b'; // setting prefix
+
+    // Zero check
+    if(len == 2)
+        result.push_back('0');
 
     return result;
 }
