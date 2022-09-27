@@ -5,6 +5,8 @@
 
 #define MEMORY_BLOCK_SIZE 64
 #define MEMORY_BLOCK_SHIFT 63
+// 4-bit mask for hex translation
+#define MASK 15
 
 // static array used to convert integer value to hex_char
 char LongInt::hex_char[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -280,22 +282,19 @@ std::ostream& operator<<(std::ostream& out, const LongInt& num)
 
 std::string LongInt::to_hex() const
 {
-    // Create string
-    uint16_t emp_blocks = empty_upper_blocks();
-    size_t len = (MEMORY_BLOCK_SIZE >> 2) * (arr_size - emp_blocks) + 2;
+    // Create string with adjusted length
+    uint16_t non_zero_block = empty_upper_blocks();
+    size_t len = (size_t)(MEMORY_BLOCK_SIZE >> 2) * (arr_size - non_zero_block) - (pref_zeroes(data[non_zero_block]) >> 2) + 2;
     std::string result(len, '0');
 
     // Filling string from the end
     size_t str_id = len - 1;
-
-    uint64_t mask = 15; // mask for last 4 bits
     for(int arr_id = arr_size - 1; str_id > 1; --arr_id)
     {
-        for(int block_id = 0; block_id < MEMORY_BLOCK_SIZE; block_id += 4)
+        for(int block_id = 0; block_id < MEMORY_BLOCK_SIZE && str_id > 1; block_id += 4)
         {
             // Check every 4 bits
-            int i = ((data[arr_id] >> block_id) & mask);
-            result[str_id--] = hex_char[(data[arr_id] >> block_id) & mask];
+            result[str_id--] = hex_char[(data[arr_id] >> block_id) & MASK];
         }
     }
 
@@ -307,16 +306,16 @@ std::string LongInt::to_hex() const
 
 std::string LongInt::to_binary() const
 {
-    // Create string
-    size_t len = (size_t)MEMORY_BLOCK_SIZE * (arr_size - empty_upper_blocks()) + 2;
+    // Create string with adjusted length
+    uint16_t non_zero_block = empty_upper_blocks();
+    size_t len = (size_t)MEMORY_BLOCK_SIZE * (arr_size - non_zero_block) - pref_zeroes(data[non_zero_block]) + 2;
     std::string result(len, '0');
-
 
     // Filling string from the end
     size_t str_id = len - 1;
     for(int arr_id = arr_size - 1; str_id > 1; --arr_id)
     {
-        for(int block_id = 0; block_id < MEMORY_BLOCK_SIZE; ++block_id, --str_id)
+        for(int block_id = 0; block_id < MEMORY_BLOCK_SIZE && str_id > 1; ++block_id, --str_id)
         {
             // Getting last bit after bit-shift
             result[str_id] = (1 & (data[arr_id] >> block_id)) ? '1' : '0';
@@ -408,15 +407,14 @@ bool LongInt::set_longer_and_shorter(const LongInt* & longer, const LongInt* & s
     return false;
 }
 
-uint16_t LongInt::pref_zeroes(const uint64_t& val)
+uint16_t LongInt::pref_zeroes(uint64_t val)
 {
     // Return count of zeroes in number prefix
     uint16_t count = 64;
     while(val)
     {
         --count;
-        val >> 1;
+        val >>= 1;
     }
-
     return count;
 }
