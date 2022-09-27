@@ -7,17 +7,18 @@
 
 /**
  * Integer class to handle 
- * long unsigned integer numbers
+ * long integer numbers
  */
 class LongInt
 {
     uint64_t* data = nullptr;
-    uint16_t arr_size;
+    int sign;
+    uint16_t arr_size;   
 
 public:
     // Constructors and destructor
     LongInt();
-    LongInt(uint64_t _default_num, uint16_t _mem_blocks = BASIC_ARRAY_SIZE);
+    LongInt(int64_t _default_num, uint16_t _mem_blocks = BASIC_ARRAY_SIZE);
     LongInt(const LongInt & cp);
     LongInt(LongInt && mv);
     ~LongInt();
@@ -42,7 +43,7 @@ public:
     // Assignment operators
     LongInt& operator=(const LongInt & cp);
     LongInt& operator=(LongInt && mv);
-    LongInt& operator=(uint64_t _default_num);
+    LongInt& operator=(int64_t _default_num);
 
     // Compare operators
     bool operator==(const LongInt& r) const;

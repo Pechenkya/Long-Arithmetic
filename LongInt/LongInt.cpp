@@ -16,7 +16,7 @@ const char LongInt::hex_char[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '
 const uint16_t LongInt::BASIC_ARRAY_SIZE = 2;
 
 // Default constructors
-LongInt::LongInt() : arr_size{BASIC_ARRAY_SIZE}
+LongInt::LongInt() : arr_size{BASIC_ARRAY_SIZE}, sign{0}
 {
     // Allocate memory and set all bits to 0
     data = new uint64_t[arr_size];
@@ -26,7 +26,7 @@ LongInt::LongInt() : arr_size{BASIC_ARRAY_SIZE}
     }
 }
 
-LongInt::LongInt(uint64_t _default_num, uint16_t _mem_blocks) : arr_size{_mem_blocks}
+LongInt::LongInt(int64_t _default_num, uint16_t _mem_blocks) : arr_size{_mem_blocks}
 {
     // Allocate memory and set all bits to 0, except last value
     data = new uint64_t[arr_size + 1];
@@ -35,11 +35,25 @@ LongInt::LongInt(uint64_t _default_num, uint16_t _mem_blocks) : arr_size{_mem_bl
         data[i] = 0;
     }
     // Set last data to _default_num
-    data[arr_size - 1] = _default_num;
+    if(_default_num > 0)
+    {
+        data[arr_size - 1] = _default_num;
+        sign = 1;
+    }
+    else if(_default_num < 0)
+    {
+        data[arr_size - 1] = -_default_num;
+        sign = -1;
+    }
+    else
+    {
+        data[arr_size - 1] = 0;
+        sign = 0;
+    }
 }
 
 // Copy constructor
-LongInt::LongInt(const LongInt & cp) : arr_size{cp.arr_size}
+LongInt::LongInt(const LongInt & cp) : arr_size{cp.arr_size}, sign{cp.sign}
 {
     data = new uint64_t[arr_size];
     for(int i = 0; i < arr_size; ++i)
@@ -49,7 +63,7 @@ LongInt::LongInt(const LongInt & cp) : arr_size{cp.arr_size}
 }
 
 // Move constructor
-LongInt::LongInt(LongInt && mv) : arr_size{mv.arr_size}
+LongInt::LongInt(LongInt && mv) : arr_size{mv.arr_size}, sign{mv.sign}
 {
     data = mv.data;
     mv.data = nullptr;
@@ -68,6 +82,7 @@ LongInt& LongInt::operator=(const LongInt & cp)
     if(data)
         delete[] data;
 
+    sign = cp.sign;
     arr_size = cp.arr_size;
     data = new uint64_t[arr_size];
     for(int i = 0; i < arr_size; ++i)
@@ -83,6 +98,7 @@ LongInt& LongInt::operator=(LongInt && mv)
     if(data)
         delete[] data;
 
+    sign = mv.sign;
     arr_size = mv.arr_size;
     data = mv.data;
     mv.data = nullptr;
@@ -90,7 +106,7 @@ LongInt& LongInt::operator=(LongInt && mv)
     return *this;
 }
 
-LongInt& LongInt::operator=(uint64_t _default_num)
+LongInt& LongInt::operator=(int64_t _default_num)
 {
     // We won't clean up data, we'll just rewrite the array
 
@@ -100,7 +116,21 @@ LongInt& LongInt::operator=(uint64_t _default_num)
         data[i] = 0;
     }
     // Set last data to _default_num
-    data[arr_size - 1] = _default_num;
+    if(_default_num > 0)
+    {
+        data[arr_size - 1] = _default_num;
+        sign = 1;
+    }
+    else if(_default_num < 0)
+    {
+        data[arr_size - 1] = -_default_num;
+        sign = -1;
+    }
+    else
+    {
+        data[arr_size - 1] = 0;
+        sign = 0;
+    }
 
     return *this;
 }
@@ -147,7 +177,8 @@ LongInt LongInt::operator+(const LongInt& r) const
 }
 
 
-// Binary operations
+
+// Binary operations (no sign involved)
 LongInt LongInt::operator<<(long long n) const
 {
     // Check for safe input
@@ -270,6 +301,9 @@ bool LongInt::operator==(const LongInt& r) const
     if(this->arr_size != r.arr_size)
         return false;
 
+    if(this->sign != r.sign)
+        return false;
+
     for(uint16_t i = 0; i < arr_size; ++i)
         if(this->data[i] != r.data[i])
             return false;
@@ -284,15 +318,17 @@ bool LongInt::operator!=(const LongInt& r) const
 
 LongInt::operator bool() const
 {
-    for(uint16_t i = 0; i < arr_size; ++i)
-        if(this->data[i] != 0)
-            return true;
-    
-    return false;
+    return sign == 0;
 }
 
 bool LongInt::operator<(const LongInt& r) const
 {
+    // First compare signs
+    if(this->sign < r.sign)
+        return true;
+    else if(this->sign > r.sign)
+        return false;
+    
     // Get longer number and take those size
     const LongInt* longer = this;
     const LongInt* shorter = &r;
@@ -308,7 +344,12 @@ bool LongInt::operator<(const LongInt& r) const
     // Compare tails
     for(uint16_t l = diff, s = 0; s < r.arr_size; ++l, ++s)
         if(longer->data[l] > shorter->data[s])
-            return r_is_longer;
+            return r_is_longer + sign;              // r_is_longer and greater by abs_val, but if we add -1 => it's less then this //
+        else if(longer->data[l] < shorter->data[s])
+            return !(r_is_longer + sign);
+    
+    // Equal
+    return false;
 }
 
 bool LongInt::operator>(const LongInt& r) const
@@ -318,12 +359,12 @@ bool LongInt::operator>(const LongInt& r) const
 
 bool LongInt::operator<=(const LongInt& r) const
 {
-    return !(r > *this);
+    return !(r < *this);
 }
 
 bool LongInt::operator>=(const LongInt& r) const
 {
-    return !(*this > r);
+    return !(*this < r);
 }
 
 // User output
@@ -338,6 +379,10 @@ std::ostream& operator<<(std::ostream& out, const LongInt& num)
 
 std::string LongInt::to_hex() const
 {
+    // Zero check
+    if(!sign)
+        return "0x0";
+
     // Create string with adjusted length
     uint16_t non_zero_block = empty_upper_blocks();
     size_t len = (size_t)(MEMORY_BLOCK_SIZE >> 2) * (arr_size - non_zero_block) - (pref_zeroes(data[non_zero_block]) >> 2) + 2;
@@ -357,15 +402,19 @@ std::string LongInt::to_hex() const
     // Setting up prefix
     result[str_id] = 'x';
 
-    // Zero check
-    if(len == 2)
-        result.push_back('0');
+    // I am proud of this line
+    if(sign < 0)
+        result = "-" + result;      
 
     return result;
 }
 
 std::string LongInt::to_binary() const
 {
+    // Zero check
+    if(!sign)
+        return "0b0";
+
     // Create string with adjusted length
     uint16_t non_zero_block = empty_upper_blocks();
     size_t len = (size_t)MEMORY_BLOCK_SIZE * (arr_size - non_zero_block) - pref_zeroes(data[non_zero_block]) + 2;
@@ -384,9 +433,9 @@ std::string LongInt::to_binary() const
 
     result[str_id] = 'b'; // setting prefix
 
-    // Zero check
-    if(len == 2)
-        result.push_back('0');
+    // I am extremely proud of this line
+    if(sign < 0)
+        result = "-" + result;
 
     return result;
 }
