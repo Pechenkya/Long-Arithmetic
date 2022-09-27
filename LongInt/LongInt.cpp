@@ -84,15 +84,11 @@ LongInt& LongInt::operator=(LongInt && mv)
     return *this;
 }
 
-LongInt& LongInt::operator=(unsigned long long _default_num)
+LongInt& LongInt::operator=(uint64_t _default_num)
 {
-    if(data)
-        delete[] data;
-    
-    arr_size = BASIC_ARRAY_SIZE;
+    // We won't clean up data, we'll just rewrite the array
 
     // Allocate memory and set all bits to 0, except last value
-    data = new uint64_t[arr_size + 1];
     for(int i = 0; i < arr_size - 1; ++i)
     {
         data[i] = 0;
@@ -106,20 +102,39 @@ LongInt& LongInt::operator=(unsigned long long _default_num)
 // Arithmetic operations
 LongInt LongInt::operator+(const LongInt& r) const
 {
-    // Temporary exception for different size (need further refactoring)
-    if(this->arr_size != r.arr_size)
-        throw std::out_of_range("Different size long addition called");
+    const LongInt* longer = this;
+    const LongInt* shorter = &r;
+    set_longer_and_shorter(longer, shorter);
 
-    LongInt result;
+    // Set result as longer value
+    LongInt result(*longer);
+
     // Carry for each step could be 0 or 1
     uint64_t carry = 0;
-    for(int i = r.arr_size - 1; i >= 0; --i)
+    int l = longer->arr_size - 1;
+    for(int s = shorter->arr_size - 1; s >= 0; --s, --l)
     {
         // Do standart addition on same memory block and check for carry
-        result.data[i] = this->data[i] + r.data[i] + carry;
+        result.data[l] += shorter->data[s] + carry;
 
         // Carry-check boolean function
-        carry = (((this->data[i] & r.data[i]) | ((~result.data[i]) & (this->data[i] | r.data[i]))) >> MEMORY_BLOCK_SHIFT);
+        carry = (((longer->data[l] & shorter->data[s]) | ((~result.data[l]) & (longer->data[l] | shorter->data[s]))) >> MEMORY_BLOCK_SHIFT);
+    }
+
+    while(carry && l >= 0)
+    {
+        result.data[l] += 1;
+
+        // Carry exists only if value was overflown
+        carry = (result.data[l] == 0);
+        --l;
+    }
+    
+    // If carry left and we have no memory blocks left -> allocate more memory
+    if(carry)
+    {
+        result.resize(longer->arr_size + 1);
+        result.data[0] = 1;
     }
 
     return result;
@@ -132,18 +147,9 @@ LongInt LongInt::operator+(const LongInt& r) const
 LongInt LongInt::operator^(const LongInt& r) const
 {
     // Get longer number and take those size
-    const LongInt* longer;
-    const LongInt* shorter;
-    if(this->arr_size < r.arr_size)
-    {
-        longer = &r;
-        shorter = this;
-    }
-    else
-    {
-        longer = this;
-        shorter = &r;
-    }
+    const LongInt* longer = this;
+    const LongInt* shorter = &r;
+    set_longer_and_shorter(longer, shorter);
 
     LongInt result(*longer);
     for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
@@ -158,18 +164,9 @@ LongInt LongInt::operator^(const LongInt& r) const
 LongInt LongInt::operator&(const LongInt& r) const
 {
     // Get longer number and take those size
-    const LongInt* longer;
-    const LongInt* shorter;
-    if(this->arr_size < r.arr_size)
-    {
-        longer = &r;
-        shorter = this;
-    }
-    else
-    {
-        longer = this;
-        shorter = &r;
-    }
+    const LongInt* longer = this;
+    const LongInt* shorter = &r;
+    set_longer_and_shorter(longer, shorter);
 
     LongInt result(*longer);
     for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
@@ -184,18 +181,9 @@ LongInt LongInt::operator&(const LongInt& r) const
 LongInt LongInt::operator|(const LongInt& r) const
 {
     // Get longer number and take those size
-    const LongInt* longer;
-    const LongInt* shorter;
-    if(this->arr_size < r.arr_size)
-    {
-        longer = &r;
-        shorter = this;
-    }
-    else
-    {
-        longer = this;
-        shorter = &r;
-    }
+    const LongInt* longer = this;
+    const LongInt* shorter = &r;
+    set_longer_and_shorter(longer, shorter);
 
     LongInt result(*longer);
     for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
@@ -248,20 +236,9 @@ LongInt::operator bool() const
 bool LongInt::operator<(const LongInt& r) const
 {
     // Get longer number and take those size
-    bool r_is_longer = false;
-    const LongInt* longer;
-    const LongInt* shorter;
-    if(this->arr_size < r.arr_size)
-    {
-        longer = &r;
-        shorter = this;
-    }
-    else
-    {
-        r_is_longer = true;
-        longer = this;
-        shorter = &r;
-    }
+    const LongInt* longer = this;
+    const LongInt* shorter = &r;
+    bool r_is_longer = set_longer_and_shorter(longer, shorter);
 
     uint16_t diff = longer->arr_size - shorter->arr_size;
 
@@ -304,8 +281,8 @@ std::ostream& operator<<(std::ostream& out, const LongInt& num)
 std::string LongInt::to_hex() const
 {
     // Create string
-    size_t parts = MEMORY_BLOCK_SIZE >> 2;
-    size_t len = parts * arr_size + 2;
+    uint16_t emp_blocks = empty_upper_blocks();
+    size_t len = (MEMORY_BLOCK_SIZE >> 2) * (arr_size - emp_blocks) + 2;
     std::string result(len, '0');
 
     // Filling string from the end
@@ -331,7 +308,7 @@ std::string LongInt::to_hex() const
 std::string LongInt::to_binary() const
 {
     // Create string
-    size_t len = (size_t)MEMORY_BLOCK_SIZE * arr_size + 2;
+    size_t len = (size_t)MEMORY_BLOCK_SIZE * (arr_size - empty_upper_blocks()) + 2;
     std::string result(len, '0');
 
 
@@ -387,9 +364,59 @@ void LongInt::resize(uint16_t new_arr_size)
     arr_size = new_arr_size;
 }
 
+void LongInt::shrink_to_fit()
+{
+    // Check for zeroes in begin
+    uint16_t diff = empty_upper_blocks();
 
+    // Then just resize
+    resize(arr_size - diff);
+}
 
 uint64_t* LongInt::get_memory() 
 {
-    return data;
+    return this->data;
+}
+
+uint16_t LongInt::get_arr_size() const
+{
+    return this->arr_size;
+}
+
+uint16_t LongInt::empty_upper_blocks() const
+{
+    uint16_t diff = 0;          // count of blocks to remove
+    while(data[diff] == 0)
+        ++diff;
+
+    return diff;
+}
+
+bool LongInt::set_longer_and_shorter(const LongInt* & longer, const LongInt* & shorter)
+{
+    // Return true if swaped
+    const LongInt* temp;
+    if(longer->arr_size < shorter->arr_size)
+    {
+        temp = longer;
+        longer = shorter;
+        shorter = temp;
+        
+        return true;
+    }
+
+    return false;
+}
+
+uint16_t LongInt::pref_zeroes(const uint64_t& val)
+{
+    // Return count of zeroes in number prefix
+    uint16_t count = 64;
+    while(val)
+    {
+        --count;
+        val >> 1;
+    }
+
+    return count;
 }
