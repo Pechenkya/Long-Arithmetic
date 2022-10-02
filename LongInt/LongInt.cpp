@@ -1,4 +1,5 @@
 #include "LongInt.hpp"
+#include <algorithm>
 
 // Memory alignment constants
 #define MEMORY_BLOCK_SIZE 64
@@ -135,6 +136,47 @@ LongInt& LongInt::operator=(int64_t _default_num)
     return *this;
 }
 
+LongInt& LongInt::operator=(const std::string& hex_str)
+{
+    // Check string for correctness
+    if(hex_str.length() > 2 && hex_str[1] == '0' && hex_str[2] == 'x' && 
+        std::all_of(hex_str.begin() + 2, hex_str.end() - 1, [](char c) -> bool {
+            return (std::isalpha(c) & std::tolower(c) < 'g') || isdigit(c);
+    })) 
+        return *this;   // Cannot construct
+    //
+
+    this->sign = 1;
+    // Resize if needed
+    if(arr_size < ((hex_str.length() - 2) >> 2) + 1)
+    {
+        arr_size = ((hex_str.length() - 2) >> 2) + 1;
+        delete[] data;
+        data = new uint64_t[arr_size];
+    }
+
+    // Clear data
+    for(uint16_t i = 0; i < arr_size; ++i)
+        data[i] = 0;
+
+    // Save ref to last_value
+    uint64_t& last_val = data[arr_size - 1];
+    for(size_t i = 2; i < hex_str.length(); ++i)
+    {
+        // Shift previous data
+        l_shift_to(*this, 4, 0);
+
+        // Calculate add value to last node
+        uint64_t to_add;
+        if(isdigit(hex_str[i]))
+            last_val += hex_str[i] - 48;               // First num
+        else
+            last_val += std::tolower(hex_str[i]) - 87; // First char + 10
+    }
+
+    return *this;
+}
+
 // Arithmetic operations
 LongInt LongInt::operator+(const LongInt& r) const
 {
@@ -190,19 +232,12 @@ LongInt LongInt::operator<<(long long n) const
 
     // Calculate local shift (not longer than memory block)
     uint16_t loc_shift = n & REST;
-    uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
 
     LongInt result(0, this->arr_size);
 
     // Global + local shift (from left to right)
-    if(glob_shift < arr_size)
-    {
-        result.data[this->arr_size - glob_shift - 1] = (this->data[this->arr_size - 1] << loc_shift);
-        for(int old = this->arr_size - 2, n = old - glob_shift; n >= 0; --n, --old)
-        {   
-            result.data[n] = (this->data[old] << loc_shift) | (this->data[old + 1] >> loc_shift_inv);
-        }
-    }
+    l_shift_to(result, loc_shift, glob_shift);
+    
     return result;  
 }
 
@@ -217,19 +252,12 @@ LongInt LongInt::operator>>(long long n) const
 
     // Calculate local shift (not longer than memory block)
     uint16_t loc_shift = n & REST;
-    uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
 
     LongInt result(0, this->arr_size);
 
     // Global + local shift (from right to left)
-    if(glob_shift < arr_size)
-    {
-        result.data[glob_shift] = (this->data[0] >> loc_shift);
-        for(uint16_t old = 1, n = glob_shift + 1; n < result.arr_size; ++n, ++old)
-        {   
-            result.data[n] = (this->data[old - 1] << loc_shift_inv) | (this->data[old] >> loc_shift);
-        }
-    }
+    r_shift_to(result, loc_shift, glob_shift);
+
     return result; 
 }
 
@@ -495,6 +523,16 @@ uint16_t LongInt::get_arr_size() const
     return this->arr_size;
 }
 
+void LongInt::set_sign(uint16_t _s)
+{
+    if(_s < 0)
+        this->sign = -1;
+    else if(_s > 0)
+        this->sign = 1;
+    else
+        this->sign = 0;
+}
+
 uint16_t LongInt::empty_upper_blocks() const
 {
     uint16_t diff = 0;          // count of blocks to remove
@@ -531,3 +569,32 @@ uint16_t LongInt::pref_zeroes(uint64_t val)
     }
     return count;
 }
+
+void LongInt::l_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const
+{
+    uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
+
+    if(glob_shift < arr_size)
+    {
+        target.data[this->arr_size - glob_shift - 1] = (this->data[this->arr_size - 1] << loc_shift);
+        for(int old = this->arr_size - 2, n = old - glob_shift; n >= 0; --n, --old)
+        {   
+            target.data[n] = (this->data[old] << loc_shift) | (this->data[old + 1] >> loc_shift_inv);
+        }
+    }
+}
+
+void LongInt::r_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const
+{
+    uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
+
+    if(glob_shift < arr_size)
+    {
+        target.data[glob_shift] = (this->data[0] >> loc_shift);
+        for(uint16_t old = 1, n = glob_shift + 1; n < target.arr_size; ++n, ++old)
+        {   
+            target.data[n] = (this->data[old - 1] << loc_shift_inv) | (this->data[old] >> loc_shift);
+        }
+    }
+}
+

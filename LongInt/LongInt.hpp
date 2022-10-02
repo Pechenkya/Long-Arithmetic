@@ -19,6 +19,7 @@ public:
     // Constructors and destructor
     LongInt();
     LongInt(int64_t _default_num, uint16_t _mem_blocks = BASIC_ARRAY_SIZE);
+    // LongInt(std::string hex_str);   // Converting from hexidecimal num in std::string
     LongInt(const LongInt & cp);
     LongInt(LongInt && mv);
     ~LongInt();
@@ -43,6 +44,7 @@ public:
     // Assignment operators
     LongInt& operator=(const LongInt & cp);
     LongInt& operator=(LongInt && mv);
+    LongInt& operator=(const std::string& hex_str);   // Converting from hexidecimal num in std::string
     LongInt& operator=(int64_t _default_num);
 
     // Compare operators
@@ -60,6 +62,7 @@ public:
     std::string to_binary() const;
 
     // Utility functions
+    void set_sign(uint16_t _s);
     void resize(uint16_t new_arr_size); 
     void shrink_to_fit();
     uint64_t* get_memory();
@@ -68,6 +71,8 @@ private:
     uint16_t empty_upper_blocks() const;
     static bool set_longer_and_shorter(const LongInt* & a, const LongInt* & b);
     static uint16_t pref_zeroes(uint64_t val);
+    void l_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const;
+    void r_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const;
 
     // Global constants for class
     static const char hex_char[];
