@@ -35,11 +35,11 @@ public:
 
     // Basic arithmetic operations
     LongInt operator+(const LongInt& r) const;
-    // LongInt operator-(const LongInt& r) const;
+    LongInt operator-(const LongInt& r) const;
     // LongInt operator*(const LongInt& r) const;
     // LongInt operator/(const LongInt& r) const;
     // LongInt square() const;
-    // LongInt power(const LongInt& r) const;
+    // LongInt power(const LongInt& pow) const;
 
     // Assignment operators
     LongInt& operator=(const LongInt & cp);
@@ -62,17 +62,22 @@ public:
     std::string to_binary() const;
 
     // Utility functions
-    void set_sign(uint16_t _s);
+    void set_sign(int _s);
     void resize(uint16_t new_arr_size); 
     void shrink_to_fit();
     uint64_t* get_memory();
     uint16_t get_arr_size() const;
 private:
+    // Inner structure
     uint16_t empty_upper_blocks() const;
     static bool set_longer_and_shorter(const LongInt* & a, const LongInt* & b);
     static uint16_t pref_zeroes(uint64_t val);
     void l_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const;
     void r_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const;
+
+    static LongInt add_data(const LongInt& left, const LongInt& right);
+    static LongInt sub_data(const LongInt& left, const LongInt& right);
+    static bool cmp_data_less(const LongInt& left, const LongInt& right);
 
     // Global constants for class
     static const char hex_char[];
