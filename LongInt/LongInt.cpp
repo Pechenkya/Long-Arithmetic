@@ -162,7 +162,7 @@ LongInt& LongInt::operator=(const std::string& hex_str)
         data[i] = 0;
 
     // Reading loop
-    for(size_t i = 3; i < hex_str.length(); ++i)
+    for(size_t i = 2; i < hex_str.length(); ++i)
     {
         // Shift previous data
         l_shift_to(*this, 4, 0);
@@ -215,7 +215,7 @@ LongInt LongInt::operator-(const LongInt& r) const
     else
     {
         result = sub_data(*this, r);    // sub sets sign value of left operand
-        if(!result)
+        if(result == 0)
             result.set_sign(0);
     }
     
