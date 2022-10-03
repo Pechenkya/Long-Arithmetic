@@ -215,7 +215,7 @@ LongInt LongInt::operator-(const LongInt& r) const
     else
     {
         result = sub_data(*this, r);    // sub sets sign value of left operand
-        if(result == 0)
+        if(result.empty_upper_blocks() == result.arr_size)
             result.set_sign(0);
     }
     
