@@ -13,10 +13,12 @@
 // Shift logic
 #define REST 63
 #define GLOBAL_SHIFT_DIVISION 6
+#define HALF_BLOCK_SHIFT 32
+#define HALF_BLOCK_MASK 4'294'967'295
 
 // static array used to convert integer value to hex_char
 const char LongInt::hex_char[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-const uint16_t LongInt::BASIC_ARRAY_SIZE = 2;
+const uint16_t LongInt::BASIC_ARRAY_SIZE = 1;
 
 // Default constructors
 LongInt::LongInt() : arr_size{BASIC_ARRAY_SIZE}, sign{0}
@@ -24,35 +26,20 @@ LongInt::LongInt() : arr_size{BASIC_ARRAY_SIZE}, sign{0}
     // Allocate memory and set all bits to 0
     data = new uint64_t[arr_size];
     for(int i = 0; i < arr_size; ++i)
-    {
         data[i] = 0;
-    }
 }
 
-LongInt::LongInt(int64_t _default_num, uint16_t _mem_blocks) : arr_size{_mem_blocks}
+LongInt::LongInt(uint64_t _default_num_abs, uint16_t _mem_blocks, int _sign) : arr_size{_mem_blocks}, sign{_sign}
 {
     // Allocate memory and set all bits to 0, except last value
     data = new uint64_t[arr_size];
     for(int i = 0; i < arr_size - 1; ++i)
-    {
         data[i] = 0;
-    }
+
     // Set last data to _default_num
-    if(_default_num > 0)
-    {
-        data[arr_size - 1] = _default_num;
-        sign = 1;
-    }
-    else if(_default_num < 0)
-    {
-        data[arr_size - 1] = -_default_num;
-        sign = -1;
-    }
-    else
-    {
-        data[arr_size - 1] = 0;
+    data[arr_size - 1] = _default_num_abs;
+    if(_default_num_abs == 0)
         sign = 0;
-    }
 }
 
 // Copy constructor
@@ -60,9 +47,7 @@ LongInt::LongInt(const LongInt & cp) : arr_size{cp.arr_size}, sign{cp.sign}
 {
     data = new uint64_t[arr_size];
     for(int i = 0; i < arr_size; ++i)
-    {
         data[i] = cp.data[i];
-    }
 }
 
 // Move constructor
@@ -89,9 +74,7 @@ LongInt& LongInt::operator=(const LongInt & cp)
     arr_size = cp.arr_size;
     data = new uint64_t[arr_size];
     for(int i = 0; i < arr_size; ++i)
-    {
         data[i] = cp.data[i];
-    }
 
     return *this;
 }
@@ -115,9 +98,8 @@ LongInt& LongInt::operator=(int64_t _default_num)
 
     // Allocate memory and set all bits to 0, except last value
     for(int i = 0; i < arr_size - 1; ++i)
-    {
         data[i] = 0;
-    }
+
     // Set last data to _default_num
     if(_default_num > 0)
     {
@@ -153,7 +135,8 @@ LongInt& LongInt::operator=(const std::string& hex_str)
     if(arr_size < ((hex_str.length() - 2) >> 4) + 1)
     {
         arr_size = ((hex_str.length() - 2) >> 4) + 1;
-        delete[] data;
+        if(data)
+            delete[] data;
         data = new uint64_t[arr_size];
     }
 
@@ -174,19 +157,33 @@ LongInt& LongInt::operator=(const std::string& hex_str)
             data[arr_size - 1] += std::tolower(hex_str[i]) - 87; // First char + 10
     }
 
+    this->shrink_to_fit();
+
     return *this;
 }
 
 // Arithmetic operations
 LongInt LongInt::operator+(const LongInt& r) const
 {
+    if(this->sign == 0)
+        return r;
+    
+    if(r.sign == 0)
+        return *this;
+
     // If signs are same, just add data and set current sign
     if(this->sign == r.sign)
         return add_data(*this, r);          // In this static method we add binary data and set right sign
     else if(cmp_data_less(*this, r))
-            return sub_data(r, *this);      // In this static method we substract binary data and set sign of int with greater data
+        return sub_data(r, *this);      // In this static method we substract binary data and set sign of int with greater data
     else
-        return sub_data(*this, r);
+    {
+        LongInt result = sub_data(*this, r);
+        if(result.empty_upper_blocks() == result.arr_size)
+            result.sign = 0;
+
+        return result;
+    }
 }
 
 LongInt LongInt::operator-(const LongInt& r) const
@@ -210,7 +207,7 @@ LongInt LongInt::operator-(const LongInt& r) const
     else if(cmp_data_less(*this, r))
     {
         result = sub_data(r, *this);
-        result.set_sign(this->sign);    // this->sign == -r.sing
+        result.set_sign(-r.sign);    // this->sign == -r.sing
     }
     else
     {
@@ -222,6 +219,44 @@ LongInt LongInt::operator-(const LongInt& r) const
     return result;
 }
 
+LongInt LongInt::operator*(const LongInt& r) const
+{
+    if(this->sign == 0 || r.sign == 0)
+        return LongInt(0);
+
+    uint16_t result_size = this->arr_size + r.arr_size;
+    // Create numbers of equal size
+    LongInt a = *this;
+    LongInt b = r;
+    
+    uint16_t input_len = (1 << log2_i16b(a.arr_size < b.arr_size ? b.arr_size : a.arr_size));
+    a.resize(input_len);
+    b.resize(input_len);
+
+    // Calculate value
+    LongInt result = karatsuba_data_mult(a, b, result_size);
+
+    if(this->sign == r.sign)
+        result.set_sign(1);
+    else
+        result.set_sign(-1);
+
+    return result;
+}
+
+LongInt LongInt::operator/(const LongInt& r) const
+{
+    int k = 64 * r.arr_size;
+
+    LongInt result(0, this->arr_size);
+    LongInt rest(*this);
+    while(!cmp_data_less(rest, r))
+    {
+        int t = 64 * rest.arr_size;
+    }
+
+    return result;
+}
 
 // Binary operations (no sign involved)
 LongInt LongInt::operator<<(long long n) const
@@ -278,11 +313,8 @@ LongInt LongInt::operator^(const LongInt& r) const
     set_longer_and_shorter(longer, shorter);
 
     LongInt result(*longer);
-    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
-        counter < shorter->arr_size; ++counter, ++i)
-    {
+    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; counter < shorter->arr_size; ++counter, ++i)
         result.data[i] ^= shorter->data[counter];
-    }
     
     if(result.empty_upper_blocks() == result.arr_size)
         result.sign = 0;
@@ -300,11 +332,8 @@ LongInt LongInt::operator&(const LongInt& r) const
     set_longer_and_shorter(longer, shorter);
 
     LongInt result(*longer);
-    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
-        counter < shorter->arr_size; ++counter, ++i)
-    {
+    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; counter < shorter->arr_size; ++counter, ++i)
         result.data[i] &= shorter->data[counter];
-    }
     
     if(result.empty_upper_blocks() == result.arr_size)
         result.sign = 0;
@@ -322,11 +351,8 @@ LongInt LongInt::operator|(const LongInt& r) const
     set_longer_and_shorter(longer, shorter);
 
     LongInt result(*longer);
-    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; 
-        counter < shorter->arr_size; ++counter, ++i)
-    {
+    for(uint16_t i = longer->arr_size - shorter->arr_size, counter = 0; counter < shorter->arr_size; ++counter, ++i)
         result.data[i] |= shorter->data[counter];
-    }
     
     if(result.empty_upper_blocks() == result.arr_size)
         result.sign = 0;
@@ -533,7 +559,10 @@ void LongInt::shrink_to_fit()
     uint16_t diff = empty_upper_blocks();
 
     // Then just resize
-    resize(arr_size - diff);
+    if(diff == arr_size)
+        resize(1);
+    else
+        resize(arr_size - diff);
 }
 
 uint64_t* LongInt::get_memory() 
@@ -597,6 +626,16 @@ void LongInt::l_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shif
 {
     uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
 
+    if(loc_shift == 0)
+    {
+        // Unsafe to use with itself (fix needed)
+        for(int old = this->arr_size - 1, n = old - glob_shift; n >= 0; --n, --old)
+        {   
+            target.data[n] = this->data[old];
+        }
+        return;
+    }
+
     if(glob_shift < arr_size)
     {
         // In case we do it to same Int, we need to save previous value of prev node
@@ -611,11 +650,22 @@ void LongInt::l_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shif
             prev_temp = next_temp;
         }
     }
+
 }
 
 void LongInt::r_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const
 {
     uint16_t loc_shift_inv = MEMORY_BLOCK_SIZE - loc_shift;
+    if(loc_shift == 0)
+    {
+        // Unsafe to use with itself (fix needed)
+        for(uint16_t old = 0, n = glob_shift + 1; n < target.arr_size; ++n, ++old)
+        {   
+            target.data[n] = this->data[old];
+        }
+
+        return;
+    }
 
     if(glob_shift < arr_size)
     {
@@ -695,6 +745,9 @@ LongInt LongInt::sub_data(const LongInt& left, const LongInt& right)
         borrow = left.data[i] < to_sub;     // 1 - if value was overflown
     }
 
+    // Shrink if needed
+    // result.shrink_to_fit();
+
     return result;
 }
 
@@ -721,4 +774,99 @@ bool LongInt::cmp_data_less(const LongInt& left, const LongInt& right)
 
     // Values are equal
     return false;
+}
+
+LongInt LongInt::karatsuba_data_mult(const LongInt& a, const LongInt& b, const uint16_t& result_size)
+{
+    // Invariant: a and b always have same size
+    // this size always is power of 2
+    // or sometimes resize needed
+
+    // Exit condition : a.arr_size == 1 => call one-integer mult
+    if(a.arr_size == 1)
+        return mult_of_64bit(a.data[0], b.data[0], result_size);
+
+    // Calculate number division
+    uint16_t half_len = a.arr_size >> 1;
+    uint64_t s = ((uint64_t)half_len << GLOBAL_SHIFT_DIVISION);
+
+    // Divide into blocks
+    LongInt low_a(1, half_len);
+    fill_with_datacp(low_a, a, 0);
+
+    LongInt high_a(1, half_len);
+    fill_with_datacp(high_a, a, half_len);
+
+    LongInt low_b(1, half_len);
+    fill_with_datacp(low_b, b, 0);
+
+    LongInt high_b(1, half_len);
+    fill_with_datacp(high_b, b, half_len);
+
+    // Three recursive calls
+    LongInt m0 = karatsuba_data_mult(low_a, low_b, result_size);
+
+    // Reuse same memory -> then resize if needed
+    low_a = low_a + high_a;
+    low_b = low_b + high_b;
+    if((low_a.arr_size != low_b.arr_size) || 
+        ((low_a.arr_size != 1 && (low_a.arr_size & 1))) || 
+         (low_b.arr_size != 1) && (low_b.arr_size & 1))
+    {
+        // set to power of 2 (using invariant: can be no more then 2^x + 1) -> so set to prev len
+        low_a.resize(a.arr_size);
+        low_b.resize(a.arr_size);
+    }
+    LongInt m1 = karatsuba_data_mult(low_a, low_b, result_size);
+    LongInt m2 = karatsuba_data_mult(high_a, high_b, result_size);
+    
+    return (m2 << (s << 1)) + ((m1 - m2 - m0) << s) + m0;
+}
+
+LongInt LongInt::mult_of_64bit(uint64_t a, uint64_t b, const uint16_t& result_size)
+{
+    LongInt result(0, result_size);
+    result.set_sign(1);
+
+    uint64_t low_a = a & HALF_BLOCK_MASK;
+    uint64_t high_a = a >> HALF_BLOCK_SHIFT;
+    uint64_t low_b = b & HALF_BLOCK_MASK;
+    uint64_t high_b = b >> HALF_BLOCK_SHIFT;
+
+    result.data[result_size - 2] = high_a * high_b; // Higher 32 mult
+    result.data[result_size - 1] = low_a * low_b;   // Lower 32 mult
+
+    LongInt l(high_b * low_a, result_size);
+    l.l_shift_to(l, HALF_BLOCK_SHIFT, 0);
+
+    LongInt r(high_a * low_b, result_size, 1);
+    r.l_shift_to(r, HALF_BLOCK_SHIFT, 0);
+
+    result = result + l + r;
+
+
+    return result;
+}
+
+void LongInt::fill_with_datacp(LongInt& to, const LongInt& from, uint16_t shift)
+{
+    if(to.arr_size >= from.arr_size)
+        to = from;
+    else
+        for(int i = to.arr_size - 1, j = from.arr_size - shift - 1; i >= 0; --i, --j)
+            to.data[i] = from.data[j];
+}
+
+uint16_t LongInt::log2_i16b(uint16_t n)
+{
+    // Count non-zero suffix length
+    uint16_t count = 0;
+    while(n)
+    {
+        ++count;
+        n >>= 1;
+    }
+
+    // up-rounded value
+    return count;
 }
