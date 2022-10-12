@@ -38,8 +38,8 @@ public:
     LongInt operator-(const LongInt& r) const;
     LongInt operator*(const LongInt& r) const;
     LongInt operator/(const LongInt& r) const;
-    // LongInt square() const;
-    // LongInt power(const LongInt& pow, uint16_t res_mem_blocks) const;
+    LongInt square() const;
+    LongInt power(const LongInt& pow, uint16_t res_mem_blocks = 64) const;
 
     // Assignment operators
     LongInt& operator=(const LongInt & cp);

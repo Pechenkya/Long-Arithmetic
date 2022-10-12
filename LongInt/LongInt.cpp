@@ -241,6 +241,8 @@ LongInt LongInt::operator*(const LongInt& r) const
     else
         result.set_sign(-1);
 
+    result.shrink_to_fit();
+
     return result;
 }
 
@@ -254,6 +256,35 @@ LongInt LongInt::operator/(const LongInt& r) const
     {
         int t = 64 * rest.arr_size;
     }
+
+    return result;
+}
+
+LongInt LongInt::square() const
+{
+    // Temporary decision
+    return *this * *this;
+}
+
+LongInt LongInt::power(const LongInt& pow, uint16_t res_mem_blocks) const
+{
+    LongInt result(1);
+
+    // Could be to complex (optimization?)
+    for(int i = 0; i < pow.arr_size; ++i)
+    {
+        for(int j = MEMORY_BLOCK_SIZE - 1; j >= 0; --j)
+        {
+            if((pow.data[i] >> j) & 1)
+                result = result * *this;
+
+            if(i != 0 || j != 0)
+                result = result * result;
+        }
+    }
+    
+    // cut-off overflow
+    result.resize(res_mem_blocks);
 
     return result;
 }
@@ -867,6 +898,5 @@ uint16_t LongInt::log2_i16b(uint16_t n)
         n >>= 1;
     }
 
-    // up-rounded value
     return count;
 }
