@@ -1,3 +1,4 @@
+#pragma once
 #include <cstdint>  // fixed size integer types
 
 // Replace with predeclaration or other stuff

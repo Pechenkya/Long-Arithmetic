@@ -1,8 +1,6 @@
 #include "LongInt.hpp"
 #include <algorithm>
 
-#include <iostream>
-
 // Memory alignment constants
 #define MEMORY_BLOCK_SIZE 64
 #define MSB_SHIFT 63
