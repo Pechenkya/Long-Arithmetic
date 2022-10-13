@@ -248,14 +248,21 @@ LongInt LongInt::operator*(const LongInt& r) const
 
 LongInt LongInt::operator/(const LongInt& r) const
 {
-    int k = 64 * r.arr_size;
+    if(this->sign == 0)
+        return LongInt(0);
+    
+    if(r.sign == 0)
+        throw std::logic_error("Division by 0!");
 
-    LongInt result(0, this->arr_size);
-    LongInt rest(*this);
-    while(!cmp_data_less(rest, r))
-    {
-        int t = 64 * rest.arr_size;
-    }
+    LongInt result = shift_substract(*this, r);
+    int _sign = this->sign == r.sign ? 1 : -1;
+
+    // Resize and set propper sign
+    result.shrink_to_fit();
+    if(result.arr_size == 1 && result.data[0] == 0)
+        result.set_sign(0); // Got nulled
+    else
+        result.set_sign(_sign);
 
     return result;
 }
@@ -899,4 +906,46 @@ uint16_t LongInt::log2_i16b(uint16_t n)
     }
 
     return count;
+}
+
+LongInt LongInt::shift_substract(LongInt a, LongInt b)
+{
+    // One calculation to get bitlength of b
+    uint32_t k = b.bit_length();
+
+    // Prepare data for calculation
+    if(b.arr_size < a.arr_size)
+        b.resize(a.arr_size);
+    else
+        a.resize(b.arr_size);
+
+    LongInt Q = 0;
+    
+    const LongInt constant_one(1, a.arr_size);
+
+    while(!cmp_data_less(a, b))
+    {
+        uint32_t t = a.bit_length();
+        LongInt c = (b << (t - k));
+
+        // Did we took too much?
+        if(cmp_data_less(a, c))
+        {
+            t -= 1;
+            c = (b << (t - k));
+        }
+        c.sign = 1;
+
+        a = a - c;
+        if(k <= t)
+            Q = Q + (constant_one << (t - k));
+    }
+
+    return Q;
+}
+
+uint32_t LongInt::bit_length() const
+{
+    return (this->arr_size - this->empty_upper_blocks()) * MEMORY_BLOCK_SIZE 
+                - pref_zeroes(this->data[this->empty_upper_blocks()]);
 }

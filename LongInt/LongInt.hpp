@@ -84,6 +84,9 @@ private:
     static void fill_with_datacp(LongInt& to, const LongInt& from, uint16_t shift);
     static uint16_t log2_i16b(uint16_t n);
 
+    static LongInt shift_substract(LongInt a, LongInt b);
+    uint32_t bit_length() const;
+
     // Global constants for class
     static const char hex_char[];
     static const uint16_t BASIC_ARRAY_SIZE;
