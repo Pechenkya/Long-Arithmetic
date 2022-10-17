@@ -62,12 +62,26 @@ public:
     std::string to_hex() const;
     std::string to_binary() const;
 
+    /* Lab 2 functionality */
+    static LongInt gcd(LongInt l, LongInt r);
+    static LongInt lcm(const LongInt& l, const LongInt& r);
+
+    // Modulo arithmetic
+    LongInt operator%(const LongInt& n) const;
+    static LongInt mod_minus(const LongInt& l, const LongInt& r, const LongInt& n);
+    static LongInt mod_plus(const LongInt& l, const LongInt& r, const LongInt& n);
+    static LongInt mod_mult(const LongInt& l, const LongInt& r, const LongInt& n);
+    LongInt mod_square(const LongInt& n);
+    LongInt mod_power(const LongInt& pow, const LongInt& n) const;
+    /* ------------------- */
+
     // Utility functions
     void set_sign(int _s);
     void resize(uint16_t new_arr_size); 
     void shrink_to_fit();
     uint64_t* get_memory();
     uint16_t get_arr_size() const;
+    LongInt& make_abs();
 private:
     // Inner structure
     uint16_t empty_upper_blocks() const;
@@ -87,6 +101,14 @@ private:
 
     static LongInt shift_substract(LongInt a, LongInt b);
     uint32_t bit_length() const;
+
+    /* Lab 2 functionality */
+
+
+    static LongInt barrett_precalc(const LongInt& x, const LongInt& n);
+    static LongInt barrett_reduction(const LongInt& x, const LongInt& n, 
+                                    const LongInt& mi);
+    /* ------------------- */
 
     // Global constants for class
     static const char hex_char[];

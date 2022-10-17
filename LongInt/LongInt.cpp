@@ -445,7 +445,7 @@ bool LongInt::operator!=(const LongInt& r) const
 
 LongInt::operator bool() const
 {
-    return sign == 0;
+    return sign != 0;
 }
 
 bool LongInt::operator<(const LongInt& r) const
@@ -553,6 +553,65 @@ std::string LongInt::to_binary() const
     return result;
 }
 
+/* Lab 2 functionality */
+LongInt LongInt::gcd(LongInt l, LongInt r)
+{
+    // Preprocess values
+    l.sign = 1;
+    r.sign = 1;
+    uint16_t max_size = (l.arr_size < r.arr_size ? r.arr_size : l.arr_size);
+    l.resize(max_size);
+    r.resize(max_size);
+
+    LongInt res(1, max_size);
+    LongInt temp(1, max_size);
+
+    // while l and r are even - divide by 2
+    while(!((l.data[max_size - 1] & 1) || (r.data[max_size - 1] & 1)))
+    {
+        l.r_shift_to(l, 1, 0);
+        r.r_shift_to(r, 1, 0);
+        res.l_shift_to(res, 1, 0);
+    }
+
+    while(!(l.data[max_size - 1] & 1))
+        l.r_shift_to(l, 1, 0);
+
+    while (r)
+    {
+        while(!(r.data[max_size - 1] & 1))
+            r.r_shift_to(r, 1, 0);
+
+        // (l, r) := (min{l, r}, abs(a - b))
+        if(cmp_data_less(l, r))
+            r = r - l;
+        else
+        {
+            temp = r;
+            r = l - r;
+            l = temp;
+        }
+    }
+    
+    res = res * l;
+
+    return res;
+}
+
+LongInt LongInt::lcm(const LongInt& l, const LongInt& r)
+{
+    return (l * r).make_abs() / gcd(l, r);
+}
+
+// Modulo arithmetic
+// LongInt LongInt::operator%(const LongInt& n) const;
+// static LongInt LongInt::mod_minus(const LongInt& l, const LongInt& r, const LongInt& n);
+// static LongInt LongInt::mod_plus(const LongInt& l, const LongInt& r, const LongInt& n);
+// static LongInt LongInt::mod_mult(const LongInt& l, const LongInt& r, const LongInt& n);
+// LongInt LongInt::mod_square(const LongInt& n);
+// LongInt LongInt::mod_power(const LongInt& pow, const LongInt& n) const;
+/* ------------------- */
+
 // Utility functions
 void LongInt::resize(uint16_t new_arr_size)
 {
@@ -619,6 +678,14 @@ void LongInt::set_sign(int _s)
         this->sign = 1;
     else
         this->sign = 0;
+}
+
+LongInt& LongInt::make_abs()
+{
+    if(this->sign < 0)
+        this->sign = 1;
+
+    return *this;
 }
 
 uint16_t LongInt::empty_upper_blocks() const
@@ -908,6 +975,9 @@ uint16_t LongInt::log2_i16b(uint16_t n)
 
 LongInt LongInt::shift_substract(LongInt a, LongInt b)
 {
+    a.make_abs();
+    b.make_abs();
+    
     // One calculation to get bitlength of b
     uint32_t k = b.bit_length();
 
