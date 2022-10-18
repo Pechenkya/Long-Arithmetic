@@ -76,13 +76,15 @@ public:
     /* ------------------- */
 
     // Utility functions
-    void set_sign(int _s);
+    void switch_sign();
     void resize(uint16_t new_arr_size); 
     void shrink_to_fit();
     uint64_t* get_memory();
     uint16_t get_arr_size() const;
     LongInt& make_abs();
 private:
+    void set_sign(int _s);
+
     // Inner structure
     uint16_t empty_upper_blocks() const;
     static bool set_longer_and_shorter(const LongInt* & a, const LongInt* & b);

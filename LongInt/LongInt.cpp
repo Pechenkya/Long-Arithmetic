@@ -749,10 +749,13 @@ uint16_t LongInt::get_arr_size() const
     return this->arr_size;
 }
 
+void LongInt::switch_sign()
+{
+    this->sign = -this->sign;
+}
+
 void LongInt::set_sign(int _s)
 {
-    // May be unsafe for user -> redo
-
     if(_s < 0)
         this->sign = -1;
     else if(_s > 0)
