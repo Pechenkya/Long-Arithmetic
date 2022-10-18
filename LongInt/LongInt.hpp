@@ -103,11 +103,8 @@ private:
     uint32_t bit_length() const;
 
     /* Lab 2 functionality */
-
-
-    static LongInt barrett_precalc(const LongInt& x, const LongInt& n);
-    static LongInt barrett_reduction(const LongInt& x, const LongInt& n, 
-                                    const LongInt& mi);
+    static LongInt barrett_precalc(const LongInt& n);
+    static LongInt barrett_reduction(const LongInt& x, const LongInt& n, const LongInt& mi);
     /* ------------------- */
 
     // Global constants for class

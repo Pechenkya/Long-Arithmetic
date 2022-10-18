@@ -1,6 +1,8 @@
 #include "LongInt.hpp"
 #include <algorithm>
 
+#include <iostream>
+
 // Memory alignment constants
 #define MEMORY_BLOCK_SIZE 64
 #define MSB_SHIFT 63
@@ -290,6 +292,7 @@ LongInt LongInt::power(const LongInt& pow, uint16_t res_mem_blocks) const
     
     // cut-off overflow
     result.resize(res_mem_blocks);
+    result.shrink_to_fit();
 
     return result;
 }
@@ -556,6 +559,9 @@ std::string LongInt::to_binary() const
 /* Lab 2 functionality */
 LongInt LongInt::gcd(LongInt l, LongInt r)
 {
+    if(l.sign == 0 || r.sign == 0)
+        return LongInt(0);
+
     // Preprocess values
     l.sign = 1;
     r.sign = 1;
@@ -600,16 +606,89 @@ LongInt LongInt::gcd(LongInt l, LongInt r)
 
 LongInt LongInt::lcm(const LongInt& l, const LongInt& r)
 {
+    if(l.sign == 0 || r.sign == 0)
+        return LongInt(0);
+
     return (l * r).make_abs() / gcd(l, r);
 }
 
 // Modulo arithmetic
-// LongInt LongInt::operator%(const LongInt& n) const;
-// static LongInt LongInt::mod_minus(const LongInt& l, const LongInt& r, const LongInt& n);
-// static LongInt LongInt::mod_plus(const LongInt& l, const LongInt& r, const LongInt& n);
-// static LongInt LongInt::mod_mult(const LongInt& l, const LongInt& r, const LongInt& n);
-// LongInt LongInt::mod_square(const LongInt& n);
-// LongInt LongInt::mod_power(const LongInt& pow, const LongInt& n) const;
+LongInt LongInt::operator%(const LongInt& n) const
+{
+    // Can't calculate -- return 0
+    if(n.sign != 1)
+        return LongInt(0);
+
+    // For unary modulo we'll just divide and substract
+    LongInt res = sub_data(*this, (shift_substract(*this, n) * n));
+
+    res.shrink_to_fit();
+    if(res.empty_upper_blocks() == res.arr_size)
+        res.sign = 0;
+
+    // Modulo for negative numbers
+    if(this->sign < 0)
+        return sub_data(n, res);
+    else
+        return res;
+}
+
+LongInt LongInt::mod_minus(const LongInt& l, const LongInt& r, const LongInt& n)
+{
+    if(n.sign <= 0)
+        return LongInt(0);
+
+    return (l - r) % n;
+}
+
+LongInt LongInt::mod_plus(const LongInt& l, const LongInt& r, const LongInt& n)
+{
+    if(n.sign <= 0)
+        return LongInt(0);
+    
+    return (l + r) % n;
+}
+
+LongInt LongInt::mod_mult(const LongInt& l, const LongInt& r, const LongInt& n)
+{
+    if(n.sign <= 0)
+        return LongInt(0);
+
+    return (l * r) % n;
+}
+
+LongInt LongInt::mod_square(const LongInt& n)
+{
+    // Find more efficient way
+    return mod_mult(*this, *this, n);
+}
+
+LongInt LongInt::mod_power(const LongInt& pow, const LongInt& n) const
+{
+    if(n.sign <= 0 || pow.sign < 0)
+        return LongInt(0);
+
+    // Here we'll use Gorner scheme with Barrett reduction optimisation
+    LongInt res(1, n.arr_size);
+
+    // Precalculations
+    LongInt mi = barrett_precalc(n);
+    LongInt mult = *this % n;
+
+    for(int i = 0; i < pow.arr_size; ++i)
+    {
+        for(int j = MEMORY_BLOCK_SIZE - 1; j >= 0; --j)
+        {
+            if((pow.data[i] >> j) & 1)
+                res = barrett_reduction(res * mult, n, mi);
+
+            if(j != 0 || i != 0)
+                res = barrett_reduction(res * res, n, mi);
+        }
+    }
+
+    return res;
+}
 /* ------------------- */
 
 // Utility functions
@@ -672,6 +751,8 @@ uint16_t LongInt::get_arr_size() const
 
 void LongInt::set_sign(int _s)
 {
+    // May be unsafe for user -> redo
+
     if(_s < 0)
         this->sign = -1;
     else if(_s > 0)
@@ -1017,3 +1098,32 @@ uint32_t LongInt::bit_length() const
     return (this->arr_size - this->empty_upper_blocks()) * MEMORY_BLOCK_SIZE 
                 - pref_zeroes(this->data[this->empty_upper_blocks()]);
 }
+
+/* Lab 2 functionality */
+LongInt LongInt::barrett_precalc(const LongInt& n)
+{
+    // n is modulo
+    uint32_t k = n.bit_length();
+    LongInt mi(1, (n.arr_size << 1) + 1);
+    return (mi << (k << 1)) / n;
+}
+
+LongInt LongInt::barrett_reduction(const LongInt& x, const LongInt& n, const LongInt& mi)
+{
+    // Invariants: x.bit_length() <= 2 * n.bit_length(); mi = 2 ^ k
+    //             x > 0, n > 0, mi > 0 (we'll recieve them by modulus), x <= n^2
+    uint32_t k = n.bit_length();
+
+    LongInt res(1, mi.arr_size);
+    res = x >> (k - 1);
+    res = res * mi;
+    res = res >> (k + 1);
+
+    res = x - res * n;
+    while (res >= n)
+        res = res - n;
+    
+    res.shrink_to_fit();
+    return res;
+}
+/* ------------------- */
