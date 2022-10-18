@@ -73,6 +73,9 @@ public:
     static LongInt mod_mult(const LongInt& l, const LongInt& r, const LongInt& n);
     LongInt mod_square(const LongInt& n);
     LongInt mod_power(const LongInt& pow, const LongInt& n) const;
+
+    // Additional
+    static LongInt div_stoopid(LongInt l, LongInt r);
     /* ------------------- */
 
     // Utility functions
@@ -82,9 +85,9 @@ public:
     uint64_t* get_memory();
     uint16_t get_arr_size() const;
     LongInt& make_abs();
-private:
+// private:
     void set_sign(int _s);
-
+private:
     // Inner structure
     uint16_t empty_upper_blocks() const;
     static bool set_longer_and_shorter(const LongInt* & a, const LongInt* & b);
@@ -108,6 +111,10 @@ private:
     static LongInt barrett_precalc(const LongInt& n);
     static LongInt barrett_reduction(const LongInt& x, const LongInt& n, const LongInt& mi);
     /* ------------------- */
+
+    // Additional
+    int get_n_bit(uint32_t n);
+    void set_n_bit(uint32_t n);
 
     // Global constants for class
     static const char hex_char[];

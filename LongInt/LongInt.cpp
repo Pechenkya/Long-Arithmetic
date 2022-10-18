@@ -252,7 +252,8 @@ LongInt LongInt::operator/(const LongInt& r) const
         return LongInt(0);
     
     if(r.sign == 0)
-        throw std::logic_error("Division by 0!");
+        return LongInt(0);
+        // throw std::logic_error("Division by 0!");
 
     LongInt result = shift_substract(*this, r);
     int _sign = this->sign == r.sign ? 1 : -1;
@@ -689,6 +690,8 @@ LongInt LongInt::mod_power(const LongInt& pow, const LongInt& n) const
 
     return res;
 }
+
+
 /* ------------------- */
 
 // Utility functions
@@ -1130,3 +1133,48 @@ LongInt LongInt::barrett_reduction(const LongInt& x, const LongInt& n, const Lon
     return res;
 }
 /* ------------------- */
+
+// Additional Task
+LongInt LongInt::div_stoopid(LongInt l, LongInt r)
+{
+    if(l.sign == 0 || r.sign == 0)
+        return LongInt(0);          // Error or just 0
+
+    int _res_sign = l.sign * r.sign;
+
+    uint32_t n = r.bit_length();
+    LongInt result(0, l.arr_size);
+    LongInt rest = 0;
+    rest.set_sign(1);
+
+    for(long long int i = n - 1; i >= 0; --i)
+    {
+        rest = rest << 1;
+        rest.data[rest.arr_size - 1] += l.get_n_bit(i);
+        if(!cmp_data_less(rest, r))
+        {
+            rest = rest - r;
+            result.set_n_bit(i);
+        }
+    }
+    
+    result.set_sign(_res_sign);
+    result.shrink_to_fit();
+    return result;
+}
+
+int LongInt::get_n_bit(uint32_t n)
+{
+    if((n >> GLOBAL_SHIFT_DIVISION) >= this->arr_size)
+        return 0;   // Error
+
+    return ((data[arr_size - 1 - (n >> GLOBAL_SHIFT_DIVISION)]) >> (n & REST)) & 1;
+}
+
+void LongInt::set_n_bit(uint32_t n)
+{
+    if((n >> GLOBAL_SHIFT_DIVISION) >= this->arr_size)
+        return;   // Error
+    
+    data[arr_size - 1 - (n >> GLOBAL_SHIFT_DIVISION)] = data[arr_size - 1 - (n >> GLOBAL_SHIFT_DIVISION)] | (1 << (n & REST));
+}

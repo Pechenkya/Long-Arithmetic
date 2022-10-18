@@ -5,11 +5,9 @@ bool playground()
 {
 	LongInt a, b, res;
 	a = "0x4d3c91c579c2c6216567a5241614b561addf76c4bb659e6fe7f65ff76a918c843f0458b3ef457bcd9022d78798a29462ec99c74e6674690267d3e9844251b39d";
-	a.switch_sign();
 	b = "0x1251253a";
 
-	std::cout << LongInt::lcm(a, b) << std::endl;
-	
+	std::cout << a / b << std::endl;
 
 	return true;
 }
@@ -41,6 +39,8 @@ int main()
 			tests_1024::test_4();
 		else if(x == 9)
 			playground();
+		else if(x == 10)
+			div_cmp();
 
 		std::cout << "Test number: ";
 		std::cin >> x;

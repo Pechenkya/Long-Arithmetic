@@ -1,13 +1,37 @@
 #include <iostream>
+#include <fstream>
 #include <iomanip>
+#include <random>
+#include <thread>
+#include <vector>
+#include <chrono>
 #include "./LongInt/LongInt.hpp"
 
 #define COM_WIDTH 15
 
+std::vector<LongInt> generated_numbers;
+
 // Let's create casual tests (because I have no time to add GoogleTesting :))
+void parse_gen_numbers()
+{
+    srand(time(NULL));
+    std::ifstream inp("./generated_hex.txt");
+    std::string input;
+    LongInt temp;
+    while(std::getline(inp, input))
+    {
+        temp = "0x" + input.substr(0, rand() % 128 + 1);
+        if(temp.to_hex() == "0x")
+            temp.set_sign(0);
+
+        generated_numbers.push_back(temp);
+    }
+}
+
 void set_tests()
 {
 	std::cout << std::boolalpha << std::left << std::hex;
+    parse_gen_numbers();
 }
 
 void print_test(const std::string& test_name, const LongInt& a, const LongInt& b, const LongInt& sum,
@@ -266,4 +290,33 @@ namespace tests_1024
 
         return (sum == sum_res) && (diff == diff_res) && (mult == mult_res) && (mult_div == mult_div_res);
     }
+}
+
+bool div_cmp()
+{
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+    using namespace std::chrono;
+
+    LongInt saver;
+
+    std::cout << "Measuring started\n";
+    int measure_count = 5000;
+    auto start = high_resolution_clock::now();
+    for(int i = 0, j = 4999; i < measure_count; ++i, --j)
+        saver = generated_numbers[i] / generated_numbers[j];
+    auto end = high_resolution_clock::now();
+
+    std::cout << std::dec << "Shift-substract alg: " << duration_cast<milliseconds>(end - start) << "\n\n";
+
+    start = high_resolution_clock::now();
+    for(int i = 0, j = 4999; i < measure_count; ++i, --j)
+        saver = LongInt::div_stoopid(generated_numbers[i], generated_numbers[j]);
+    end = high_resolution_clock::now();
+
+    std::cout << "Default alg: " << duration_cast<milliseconds>(end - start) << "\n\n" << std::hex;
+
+    return true;
 }
