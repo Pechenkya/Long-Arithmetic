@@ -3,12 +3,24 @@
 // Playground for various tests to define before compile
 bool playground()
 {
-	LongInt a, b, res;
-	a = "0xC514FF44301208C3535C8C097A58024B";
-	b = "0x84C88E3EE2D4F87E0970164A804D96D0971";
+	LongInt a, b, n;
+	a = "0xdaf1abda4ad4d9fe3e36a529210c2ae99b9";
+	b = "0x4d3c91c579c2c6";
+	n = "0x5dc";
 
-	std::cout << LongInt::div_stoopid(a, b) << std::endl;
+	std::cout << a << std::endl;
+	std::cout << b << std::endl;
 
+	std::cout << a - b << std::endl;
+
+	std::cout << "a mod b : " << a % b << std::endl;
+	std::cout << "a + b mod n : " << LongInt::mod_plus(a, b, n) << std::endl;
+	std::cout << "a - b mod n : " << LongInt::mod_minus(a, b, n) << std::endl;
+	std::cout << "a * b mod n : " << LongInt::mod_mult(a, b, n) << std::endl;
+	std::cout << "a ^ 2 mod n : " << a.mod_square(n) << std::endl;
+	std::cout << "a ^ b mod n : " << a.mod_power(b, n) << std::endl;
+
+	std::cout << std::endl;
 	return true;
 }
 

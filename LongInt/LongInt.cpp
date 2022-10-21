@@ -920,10 +920,11 @@ LongInt LongInt::sub_data(const LongInt& left, const LongInt& right)
 
     uint64_t borrow = 0;
     int left_hi = left.empty_upper_blocks();                   // Higher non-zero memory block of left val
-    int right_hi = right.arr_size - (left.arr_size - left_hi); // Bound for substraction
+    int right_hi = right.empty_upper_blocks(); // Bound for substraction
 
     // Substraction loop
-    for(int i = left.arr_size - 1, j = right.arr_size - 1; i >= left_hi; --i, --j)
+    int i = left.arr_size - 1;
+    for(int j = right.arr_size - 1; j >= right_hi; --i, --j)
     {   
         // Calculate value to substract
         uint64_t to_sub = right.data[j] + borrow;
@@ -933,6 +934,13 @@ LongInt LongInt::sub_data(const LongInt& left, const LongInt& right)
 
         // Check if we have borrowed a bit
         borrow = left.data[i] < to_sub;     // 1 - if value was overflown
+    }
+
+    while (borrow)
+    {
+        result.data[i] -= borrow;
+
+        borrow = (left.data[i] == 0);
     }
 
     // Shrink if needed
