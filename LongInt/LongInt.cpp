@@ -15,6 +15,7 @@
 #define GLOBAL_SHIFT_DIVISION 6
 #define HALF_BLOCK_SHIFT 32
 #define HALF_BLOCK_MASK 4'294'967'295
+#define CONST_1 1ull
 
 // static array used to convert integer value to hex_char
 const char LongInt::hex_char[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -840,7 +841,6 @@ void LongInt::l_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shif
             prev_temp = next_temp;
         }
     }
-
 }
 
 void LongInt::r_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shift) const
@@ -1138,18 +1138,20 @@ LongInt LongInt::barrett_reduction(const LongInt& x, const LongInt& n, const Lon
 LongInt LongInt::div_stoopid(LongInt l, LongInt r)
 {
     if(l.sign == 0 || r.sign == 0)
-        return LongInt(0);          // Error or just 0
+        return LongInt(0);          // Error or just 0 (temp for measuring)
 
     int _res_sign = l.sign * r.sign;
 
-    uint32_t n = r.bit_length();
-    LongInt result(0, l.arr_size);
-    LongInt rest = 0;
-    rest.set_sign(1);
+    uint32_t n = l.bit_length();
+    uint16_t max_size = r.arr_size < l.arr_size ? l.arr_size : r.arr_size;
+    LongInt result(0, max_size);
+    LongInt rest(0, max_size);
+    r.resize(max_size);
 
     for(long long int i = n - 1; i >= 0; --i)
     {
         rest = rest << 1;
+        rest.set_sign(1);
         rest.data[rest.arr_size - 1] += l.get_n_bit(i);
         if(!cmp_data_less(rest, r))
         {
@@ -1160,21 +1162,29 @@ LongInt LongInt::div_stoopid(LongInt l, LongInt r)
     
     result.set_sign(_res_sign);
     result.shrink_to_fit();
+
+    if(result.empty_upper_blocks() == result.arr_size)
+        result.set_sign(0);
+
     return result;
 }
 
 int LongInt::get_n_bit(uint32_t n)
 {
+    uint16_t gl = n >> GLOBAL_SHIFT_DIVISION;
     if((n >> GLOBAL_SHIFT_DIVISION) >= this->arr_size)
         return 0;   // Error
 
-    return ((data[arr_size - 1 - (n >> GLOBAL_SHIFT_DIVISION)]) >> (n & REST)) & 1;
+    uint16_t idx = arr_size - 1 - gl;
+    return ((data[idx]) >> (n & REST)) & CONST_1;
 }
 
 void LongInt::set_n_bit(uint32_t n)
 {
-    if((n >> GLOBAL_SHIFT_DIVISION) >= this->arr_size)
+    uint16_t gl = n >> GLOBAL_SHIFT_DIVISION;
+    if(gl >= this->arr_size)
         return;   // Error
-    
-    data[arr_size - 1 - (n >> GLOBAL_SHIFT_DIVISION)] = data[arr_size - 1 - (n >> GLOBAL_SHIFT_DIVISION)] | (1 << (n & REST));
+
+    uint16_t idx = arr_size - 1 - gl;
+    data[idx] = data[idx] | (CONST_1 << (n & REST));
 }

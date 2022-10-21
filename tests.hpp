@@ -20,7 +20,7 @@ void parse_gen_numbers()
     LongInt temp;
     while(std::getline(inp, input))
     {
-        temp = "0x" + input.substr(0, rand() % 128 + 1);
+        temp = "0x" + input.substr(0, rand() % 256 + 1);
         if(temp.to_hex() == "0x")
             temp.set_sign(0);
 
@@ -300,23 +300,40 @@ bool div_cmp()
     using std::chrono::milliseconds;
     using namespace std::chrono;
 
-    LongInt saver;
+
+    int measure_count = 5000;
+    LongInt saver1[measure_count];
+    LongInt saver2[measure_count];
 
     std::cout << "Measuring started\n";
-    int measure_count = 5000;
     auto start = high_resolution_clock::now();
     for(int i = 0, j = 4999; i < measure_count; ++i, --j)
-        saver = generated_numbers[i] / generated_numbers[j];
+        saver1[i] = generated_numbers[i] / generated_numbers[j];
     auto end = high_resolution_clock::now();
 
     std::cout << std::dec << "Shift-substract alg: " << duration_cast<milliseconds>(end - start) << "\n\n";
 
     start = high_resolution_clock::now();
     for(int i = 0, j = 4999; i < measure_count; ++i, --j)
-        saver = LongInt::div_stoopid(generated_numbers[i], generated_numbers[j]);
+        saver2[i] = LongInt::div_stoopid(generated_numbers[i], generated_numbers[j]);
     end = high_resolution_clock::now();
 
     std::cout << "Default alg: " << duration_cast<milliseconds>(end - start) << "\n\n" << std::hex;
+
+    int x;
+    std::cin >> x;
+
+    for(int i = 0; i < measure_count; ++i)
+    {
+        // std::cout << (saver1[i] == saver2[i]) << std::endl;
+        if(saver1[i] != saver2[i])
+        {
+            std::cout << "a : " << generated_numbers[i] << std::endl;
+            std::cout << "a : " << generated_numbers[4999 - i] << std::endl;
+            std::cout << "\t1: " << saver1[i] << std::endl;
+            std::cout << "\t2: " << saver2[i] << std::endl;
+        }
+    }
 
     return true;
 }

@@ -4,10 +4,10 @@
 bool playground()
 {
 	LongInt a, b, res;
-	a = "0x4d3c91c579c2c6216567a5241614b561addf76c4bb659e6fe7f65ff76a918c843f0458b3ef457bcd9022d78798a29462ec99c74e6674690267d3e9844251b39d";
-	b = "0x1251253a";
+	a = "0xC514FF44301208C3535C8C097A58024B";
+	b = "0x84C88E3EE2D4F87E0970164A804D96D0971";
 
-	std::cout << a / b << std::endl;
+	std::cout << LongInt::div_stoopid(a, b) << std::endl;
 
 	return true;
 }
