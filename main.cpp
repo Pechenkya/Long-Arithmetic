@@ -1,17 +1,18 @@
 #include "tests.hpp"
+#include "LongInt/LongInt.hpp"
+#include <iostream>
 
 // Playground for various tests to define before compile
 bool playground()
 {
 	LongInt a, b, n;
-	a = "0xdaf1abda4ad4d9fe3e36a529210c2ae99b9";
-	b = "0x4d3c91c579c2c6";
-	n = "0x5dc";
+	gen_arr_tests::get_pair(a, b);
+	// a = "0xad25126";
+	// b = "0xAAA";
+	n = "0x4d3c91c579c2c6";
 
-	std::cout << a << std::endl;
-	std::cout << b << std::endl;
-
-	std::cout << a - b << std::endl;
+	std::cout << "a : " << a << std::endl;
+	std::cout << "b : " << b << std::endl;
 
 	std::cout << "a mod b : " << a % b << std::endl;
 	std::cout << "a + b mod n : " << LongInt::mod_plus(a, b, n) << std::endl;
@@ -19,6 +20,9 @@ bool playground()
 	std::cout << "a * b mod n : " << LongInt::mod_mult(a, b, n) << std::endl;
 	std::cout << "a ^ 2 mod n : " << a.mod_square(n) << std::endl;
 	std::cout << "a ^ b mod n : " << a.mod_power(b, n) << std::endl;
+
+	std::cout << "gcd(a,b) : " << LongInt::gcd(a, b) << std::endl;
+	std::cout << "lcm(a,b) : " << LongInt::lcm(a, b) << std::endl;
 
 	std::cout << std::endl;
 	return true;
@@ -52,7 +56,7 @@ int main()
 		else if(x == 9)
 			playground();
 		else if(x == 10)
-			div_cmp();
+			gen_arr_tests::div_cmp();
 
 		std::cout << "Test number: ";
 		std::cin >> x;

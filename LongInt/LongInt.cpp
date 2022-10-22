@@ -677,15 +677,14 @@ LongInt LongInt::mod_power(const LongInt& pow, const LongInt& n) const
     LongInt mi = barrett_precalc(n);
     LongInt mult = *this % n;
 
-    for(int i = 0; i < pow.arr_size; ++i)
+    for(int i = pow.arr_size - 1; i >= 0; --i)
     {
-        for(int j = MEMORY_BLOCK_SIZE - 1; j >= 0; --j)
+        for(int j = 0; j < MEMORY_BLOCK_SIZE; ++j)
         {
             if((pow.data[i] >> j) & 1)
                 res = barrett_reduction(res * mult, n, mi);
-
-            if(j != 0 || i != 0)
-                res = barrett_reduction(res * res, n, mi);
+            
+            mult = barrett_reduction(mult * mult, n, mi);
         }
     }
 
@@ -860,7 +859,7 @@ void LongInt::r_shift_to(LongInt& target, uint16_t loc_shift, uint16_t glob_shif
     if(glob_shift < arr_size)
     {
         // In case we do it to same Int, we need to save previous value of prev node
-        uint64_t prev_temp = this->data[this->arr_size - 1]; // In case we do it to same Int, we need to save previous value of prev node
+        uint64_t prev_temp = this->data[0]; // In case we do it to same Int, we need to save previous value of prev node
         uint64_t next_temp;
 
         target.data[glob_shift] = (this->data[0] >> loc_shift);
