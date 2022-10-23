@@ -320,8 +320,8 @@ bool gen_arr_tests::div_cmp()
 
 void gen_arr_tests::get_pair(LongInt& a, LongInt& b)
 {
-    a = generated_numbers[rand() % TEST_SAMPLE_SIZE];
-    b = generated_numbers[rand() % TEST_SAMPLE_SIZE];
+    a = generated_numbers[rand() % GEN_ARR_SIZE];
+    b = generated_numbers[rand() % GEN_ARR_SIZE];
 }
 
 void parse_gen_numbers()

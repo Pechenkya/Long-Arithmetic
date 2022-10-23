@@ -7,9 +7,9 @@ bool playground()
 {
 	LongInt a, b, n;
 	gen_arr_tests::get_pair(a, b);
-	// a = "0xad25126";
-	// b = "0xAAA";
 	n = "0x4d3c91c579c2c6";
+
+	std::cout << std::dec << n << std::endl;
 
 	std::cout << "a : " << a << std::endl;
 	std::cout << "b : " << b << std::endl;

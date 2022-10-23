@@ -491,6 +491,8 @@ std::ostream& operator<<(std::ostream& out, const LongInt& num)
     // Check output mod for hexidecimal
     if(out.flags() & std::ios_base::hex)
         return out << num.to_hex();
+    if(out.flags() & std::ios_base::dec)
+        return out << num.to_dec();
     else
         return out << num.to_binary();
 }
@@ -558,6 +560,34 @@ std::string LongInt::to_binary() const
     return result;
 }
 
+std::string LongInt::to_dec() const
+{
+    // Zero check
+    if(!sign)
+        return "0";
+
+    std::string result;
+    LongInt temp = *this;
+    LongInt ten(10);
+    LongInt div_s;
+
+    while(temp)
+    {
+        div_s = temp / ten;
+        temp = temp - div_s * ten;
+        result.push_back((char)(temp).data[temp.arr_size - 1] + 48);
+        temp = std::move(div_s);
+    }
+
+    std::reverse(result.begin(), result.end());
+
+    // I am proud of this line
+    if(sign < 0)
+        return "-" + result;  
+
+    return result;
+}
+
 /* Lab 2 functionality */
 LongInt LongInt::gcd(LongInt l, LongInt r)
 {
@@ -590,7 +620,7 @@ LongInt LongInt::gcd(LongInt l, LongInt r)
         while(!(r.data[max_size - 1] & 1))
             r.r_shift_to(r, 1, 0);
 
-        // (l, r) := (min{l, r}, abs(a - b))
+        // (l, r) := (min{l, r}, abs(l - r))
         if(cmp_data_less(l, r))
             r = r - l;
         else
@@ -690,8 +720,6 @@ LongInt LongInt::mod_power(const LongInt& pow, const LongInt& n) const
 
     return res;
 }
-
-
 /* ------------------- */
 
 // Utility functions

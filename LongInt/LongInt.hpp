@@ -61,6 +61,7 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const LongInt& num);
     std::string to_hex() const;
     std::string to_binary() const;
+    std::string to_dec() const;
 
     /* Lab 2 functionality */
     static LongInt gcd(LongInt l, LongInt r);
